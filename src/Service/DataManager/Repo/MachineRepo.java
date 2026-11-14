@@ -12,7 +12,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MachineRepo implements MachAssRepoInt<Machine>{
+public class MachineRepo implements RepoButWithFindByID<Machine> {
 
     @Override
     public void addEntry(Machine item) {

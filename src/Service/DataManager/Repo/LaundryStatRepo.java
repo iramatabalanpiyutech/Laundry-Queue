@@ -1,11 +1,10 @@
 package Service.DataManager.Repo;
 
 
+import Model.Customer;
 import Model.Load;
-import Model.Machine;
 import Model.ServiceStage;
 import Service.DataManager.DataConnections;
-import oracle.sql.TIMESTAMP;
 
 import java.sql.*;
 import java.time.LocalDateTime;
@@ -13,10 +12,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LaundryStatRepo implements AssRepo<Load> {
-    MachineRepo mr = new MachineRepo();
-    List<Machine> lm = mr.findAll();
-    Machine selected = lm.get(0);
-    private final int machineId = selected.getMachineId();
+    CustomerRepo cr = new CustomerRepo();
+    List<Customer> lCst = cr.findAll();
+    Customer selected = lCst.get(0);
 
     @Override
     public void addEntry(Load item) {
@@ -25,7 +23,7 @@ public class LaundryStatRepo implements AssRepo<Load> {
                 Connection conn = DataConnections.getConnection();
                 PreparedStatement  ps = conn.prepareStatement(sql);
                 ){
-            ps.setInt(1, machineId);
+            ps.setInt(1, item.getCstIdFk());
             ps.setDouble(2,item.getLoadWeight());
             ps.setString(3,item.getLoadStat().toString());
             ps.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()));

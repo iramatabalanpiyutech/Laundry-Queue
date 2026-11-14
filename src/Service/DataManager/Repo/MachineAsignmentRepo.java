@@ -2,14 +2,13 @@ package Service.DataManager.Repo;
 
 import Model.MachineAssignment;
 import Service.DataManager.DataConnections;
-import oracle.jdbc.proxy.annotation.Pre;
 
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MachineAsignmentRepo implements MachAssRepoInt<MachineAssignment>{
+public class MachineAsignmentRepo implements RepoButWithFindByID<MachineAssignment> {
 
     @Override
     public void addEntry(MachineAssignment item) {

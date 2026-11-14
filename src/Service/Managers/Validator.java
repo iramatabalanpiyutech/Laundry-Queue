@@ -1,6 +1,8 @@
 package Service.Managers;
 
 
+import Model.Customer;
+
 public final class Validator {
 
     private Validator() {} // Prevent instantiation
@@ -48,7 +50,7 @@ public final class Validator {
     }
 
     // Check if an object exists
-    public static <T> T requireExists(T object, String field) {
+   public static <T> T requireExists(T object, String field) {
         if (object == null) {
             throw new IllegalArgumentException(
                     field + " does not exist."

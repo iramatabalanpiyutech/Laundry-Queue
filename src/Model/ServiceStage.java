@@ -1,8 +1,8 @@
 package Model;
 
 public enum ServiceStage {
-    QUEUED_WASHER("Waiting_Washer"),
-    QUEUED_DRYER("Waiting_Dryer"),
+    QUEUED_WASHER("Queued_Washer"),
+    QUEUED_DRYER("Queued_Dryer"),
     WASHING("Washing"),
     TRANSFER("Transferring"),
     DRYING("Drying"),

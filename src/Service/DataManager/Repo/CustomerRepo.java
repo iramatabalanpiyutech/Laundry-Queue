@@ -1,13 +1,15 @@
 package Service.DataManager.Repo;
 
 import Model.Customer;
+import Model.Load;
+import Model.ServiceStage;
 import Service.DataManager.DataConnections;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CustomerRepo implements Repository<Customer> {
+public class CustomerRepo implements RepoButWithFindByID<Customer> {
 
 
     @Override
@@ -74,6 +76,33 @@ public class CustomerRepo implements Repository<Customer> {
         }
     }
 
+    @Override
+    public Customer findById(int id) {
+        String sql = "SELECT * FROM CUSTOMER WHERE CUSTOMER_ID = ?";
+
+        try (
+                Connection conn = DataConnections.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)
+        ) {
+            ps.setInt(1, id);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new Customer(
+                            rs.getInt("CUSTOMER_ID"),
+                            rs.getString("CUSTOMER_NAME"),
+                            rs.getString("CONTACT_NUMBER")
+                    );
+                }
+            }
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return null;
+
+    }
 
 
     @Override
