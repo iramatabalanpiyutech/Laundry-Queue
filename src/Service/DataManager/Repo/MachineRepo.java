@@ -77,7 +77,7 @@ public class MachineRepo implements MachAssRepoInt<Machine>{
     @Override
     public Machine findById(int id) {
 
-        String sql = "SELECT * FROM MACHINE_ASSIGNMENTS WHERE ASSIGNMENT_ID = ?";
+        String sql = "SELECT * FROM MACHINES WHERE MACHINE_ID = ?";
 
         try (
                 Connection conn = DataConnections.getConnection();

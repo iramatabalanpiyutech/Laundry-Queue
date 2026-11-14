@@ -7,7 +7,7 @@ import Service.Exception.InsufficientCostumerInformationException;
 import java.util.List;
 
 public class CustomerManager {
-    private final CustomerRepo repo = new CustomerRepo();
+    private final CustomerRepo cstR = new CustomerRepo();
     private final int TEMP_ID = 0;
 
     public void addCustomer(String cstName, String cstContact) {
@@ -23,14 +23,14 @@ public class CustomerManager {
             throw new IllegalArgumentException("No symbold and numbers 1-9 /*-+.");
         }
 
-        repo.addEntry(new Customer(TEMP_ID,cstName,cstContact));
+        cstR.addEntry(new Customer(TEMP_ID,cstName,cstContact));
     }
 
 
     //not working?
     public void updateCustomer(int cstId, String newName, String newContact){
         CustomerRepo cstRepo = new CustomerRepo();
-        List<Customer> customers = repo.findAll();
+        List<Customer> customers = cstR.findAll();
 
         boolean notFound = customers.stream().noneMatch(cst ->cst.getCustomerId() == cstId);
 
@@ -50,12 +50,12 @@ public class CustomerManager {
             throw new IllegalArgumentException("No symbold and numbers 1-9 /*-+.");
         }
 
-        repo.updateEntry(new Customer(cstId,newName,newContact));
+        cstR.updateEntry(new Customer(cstId,newName,newContact));
     }
 
     void removeCustomer(int cstId){
         CustomerRepo cstRepo = new CustomerRepo();
-        List<Customer> customers = repo.findAll();
+        List<Customer> customers = cstR.findAll();
 
         boolean notFound = customers.stream().noneMatch(cst ->cst.getCustomerId() == cstId);
 
@@ -65,6 +65,10 @@ public class CustomerManager {
 
         cstRepo.deleteEntry(cstId);
 
+    }
+
+    public List<Customer> getAllCustomers(){
+        return cstR.findAll();
     }
 
 }

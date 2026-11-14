@@ -7,7 +7,9 @@ public enum ServiceStage {
     TRANSFER("Transferring"),
     DRYING("Drying"),
     COMPLETED("Finished"),
-    CANCELED("Canceled");
+    CANCELED("Canceled"),
+    MACHINE_BROKE_INTERRUPTION("Machine_broke_interruption");
+
 
     private final String servState;
     ServiceStage(String servState) {

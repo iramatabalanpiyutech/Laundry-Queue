@@ -5,7 +5,8 @@ public enum MachineState {
     IN_USE("In_Use"),
     MAINTENANCE("Maintenance"),
     OUT_OF_SERVICE("Out_Of_Service"),
-    TRANSFER("Transfer");
+    TRANSFER("Transfer"),
+    REASSIGN("Reassign");
 
     private final String macState;
 
