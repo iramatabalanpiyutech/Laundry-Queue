@@ -38,7 +38,7 @@ public class LaundryStatRepo implements AssRepo<Load> {
 
     @Override
     public void updateEntry(Load item) {
-        String sql = "UPDATE LAUNDRY_LOADS SET WEIGHT_KG = ?, QUEUE_STATUS = ? WHERE LOAD_ID = ?";
+        String sql = "UPDATE LAUNDRY_LOADS SET WEIGHT_KG = ? WHERE LOAD_ID = ?";
 
         try (
             Connection conn = DataConnections.getConnection();
@@ -46,7 +46,7 @@ public class LaundryStatRepo implements AssRepo<Load> {
         ) {
             // Set parameters here
             ps.setDouble(1, item.getLoadWeight());
-            ps.setString(2, item.getLoadStat().toString());
+            ps.setInt(2,item.getLoadId());
 
             int rows = ps.executeUpdate();
             System.out.println("Rows affected: " + rows);
@@ -80,7 +80,19 @@ public class LaundryStatRepo implements AssRepo<Load> {
 
     @Override
     public void deleteEntry(int id) {
+        String sql = "DELETE LAUNDRY_LOADS WHERE LOAD_ID = ?";
+        try(
+                Connection con = DataConnections.getConnection();
+                PreparedStatement prep = con.prepareStatement(sql);
+        ){
 
+            prep.setInt(1, id);
+            int rows = prep.executeUpdate();
+            System.out.println(rows);
+
+        }catch (SQLException e){
+            System.out.println(e.getMessage());
+        }
     }
 
     @Override
