@@ -4,6 +4,7 @@ package Service.DataManager.Repo;
 import Model.Customer;
 import Model.Load;
 import Model.ServiceStage;
+import Model.ServiceType;
 import Service.DataManager.DataConnections;
 
 import java.sql.*;
@@ -18,7 +19,7 @@ public class LaundryStatRepo implements AssRepo<Load> {
 
     @Override
     public void addEntry(Load item) {
-        String sql = "INSERT INTO LAUNDRY_LOADS(CUSTOMER_ID, WEIGHT_KG, QUEUE_STATUS, RECEIVED_AT) VALUES (?,?,?,?)";
+        String sql = "INSERT INTO LAUNDRY_LOADS(CUSTOMER_ID, WEIGHT_KG, QUEUE_STATUS, RECEIVED_AT, SERVICE_TYPE) VALUES (?,?,?,?,?)";
         try(
                 Connection conn = DataConnections.getConnection();
                 PreparedStatement  ps = conn.prepareStatement(sql);
@@ -27,6 +28,7 @@ public class LaundryStatRepo implements AssRepo<Load> {
             ps.setDouble(2,item.getLoadWeight());
             ps.setString(3,item.getLoadStat().toString());
             ps.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()));
+            ps.setString(5, item.getServiceType().name());
             int row = ps.executeUpdate();
             System.out.println("Rows affected: " + row );
 
@@ -113,7 +115,8 @@ public class LaundryStatRepo implements AssRepo<Load> {
                             rs.getInt("CUSTOMER_ID"),
                             rs.getDouble("WEIGHT_KG"),
                             ServiceStage.valueOf(rs.getString("QUEUE_STATUS")),
-                            rs.getTimestamp("RECEIVE_AT").toLocalDateTime()
+                            rs.getTimestamp("RECEIVE_AT").toLocalDateTime(),
+                            ServiceType.valueOf(rs.getString("SERVICE_TYPE"))
                     ));
                 }
 
@@ -142,7 +145,8 @@ public class LaundryStatRepo implements AssRepo<Load> {
                             rs.getInt("CUSTOMER_ID"),
                             rs.getDouble("WEIGHT_KG"),
                             ServiceStage.valueOf(rs.getString("QUEUE_STATUS")),
-                            rs.getTimestamp("RECEIVED_AT").toLocalDateTime()
+                            rs.getTimestamp("RECEIVED_AT").toLocalDateTime(),
+                            ServiceType.valueOf(rs.getString("SERVICE_TYPE"))
                     );
                 }
             }

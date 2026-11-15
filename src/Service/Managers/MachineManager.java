@@ -2,10 +2,7 @@ package Service.Managers;
 import Model.Machine;
 import Model.MachineState;
 import Model.MachineType;
-import Service.Managers.Validator;
 import Service.DataManager.Repo.MachineRepo;
-
-import javax.crypto.Mac;
 import java.util.List;
 
 public class MachineManager{
@@ -24,29 +21,33 @@ public class MachineManager{
 
     public void updateMachineState(int id, MachineState newState){
 
+        Validator.requirePositiveId(id, "Machine ID");
         Machine machine = Validator.requireExists(mr.findById(id), "Machine Id");
-
+        Validator.requireExists(newState, "New Machine State");
        MachineState currentState = machine.getMachineState();
        MachineType retainMachState = machine.getMachineType();
        double retainWeight = machine.getMachineCapacity();
 
-       Validator.requirePositiveId(id, "Machine ID");
+
+
 
        boolean validTransition = switch (currentState){
-           case AVAILABLE -> newState == MachineState.IN_USE || newState == MachineState.MAINTENANCE;
+           case AVAILABLE -> newState == MachineState.IN_USE || newState == MachineState.MAINTENANCE || newState == MachineState.RETIRED;
            case IN_USE -> newState == MachineState.AVAILABLE || newState == MachineState.OUT_OF_SERVICE;
            case MAINTENANCE -> newState == MachineState.AVAILABLE || newState == MachineState.OUT_OF_SERVICE;
-           case OUT_OF_SERVICE -> newState == MachineState.MAINTENANCE;
+           case OUT_OF_SERVICE -> newState == MachineState.MAINTENANCE || newState == MachineState.RETIRED;
            case TRANSFER -> newState == MachineState.AVAILABLE;
            case REASSIGN -> newState == MachineState.OUT_OF_SERVICE || newState == MachineState.MAINTENANCE;
+           case RETIRED -> false;
        };
 
+        Validator.requireState(validTransition, "Status Transition failed from " + currentState + " to " + newState);
        Machine updMachStat = new Machine(id, retainWeight, retainMachState, newState);
        mr.updateEntry(updMachStat);
 
     }
 
-    public void removeMachine(int id){
+    public void retireMachine(int id){
         Machine machine = Validator.requireExists(mr.findById(id), "Machine ID");
         Validator.requirePositiveId(id, "Machine ID");
 
@@ -54,11 +55,11 @@ public class MachineManager{
         MachineType retainMachState = machine.getMachineType();
         double retainWeight = machine.getMachineCapacity();
 
-        boolean allowedToDelete = currentState == MachineState.AVAILABLE || currentState == MachineState.OUT_OF_SERVICE;
+        boolean allowedToDelete = currentState == MachineState.RETIRED;
 
         Validator.requireState(allowedToDelete, "Cannot delete machine with state set on " + currentState);
 
-        mr.deleteEntry(id);
+        updateMachineState(id, MachineState.RETIRED);
     }
 
     public List<Machine> getAllMachine(){

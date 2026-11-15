@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MachineAsignmentRepo implements RepoButWithFindByID<MachineAssignment> {
+public class MachineAsignmentRepo implements RepoSpecificallyForMachineAss<MachineAssignment> {
 
     @Override
     public void addEntry(MachineAssignment item) {
@@ -42,6 +42,30 @@ public class MachineAsignmentRepo implements RepoButWithFindByID<MachineAssignme
             } catch (SQLException e) {
                 System.out.println(e.getMessage());
             }
+
+    }
+
+    @Override
+    public void updateStateStart(MachineAssignment item) {
+        String sql = "UPDATE MACHINE_ASSIGNMENTS SET STARTED_AT = ? WHERE ASSIGNMENT_ID = ?";
+        try (
+                Connection conn = DataConnections.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)
+        ) {
+            // Set parameters here
+            ps.setInt(1, item.getDurationMinutes());
+
+            int rows = ps.executeUpdate();
+            System.out.println("Rows affected: " + rows);
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+    }
+
+    @Override
+    public void updateStateEnd(MachineAssignment item) {
 
     }
 
@@ -164,5 +188,47 @@ public class MachineAsignmentRepo implements RepoButWithFindByID<MachineAssignme
         }
 
         return ma;
+    }
+
+    @Override
+    public boolean hasActiveLoadAssignment(int id) {
+        String sql = "SELECT COUNT(*) FROM MACHINE_ASSIGNMENTS WHERE LOAD_ID = ? AND ENDED_AT IS NULL";
+        try(
+                Connection conn = DataConnections.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)
+                ){
+            ps.setInt(1,id);
+
+            try(ResultSet rs = ps.executeQuery()){
+                if(rs.next()){
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return false;
+    }
+
+    @Override
+    public boolean hasActiveMachineAssignment(int id) {
+        String sql = "SELECT COUNT(*) FROM MACHINE_ASSIGNMENTS WHERE MACHINE_ID = ? AND ENDED_AT IS NULL";
+        try (
+                Connection conn = DataConnections.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)
+        ) {
+            ps.setInt(1, id);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        return false;
     }
 }

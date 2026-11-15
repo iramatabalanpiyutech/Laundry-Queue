@@ -43,6 +43,16 @@ public class MachineAssignment {
         return endedAt;
     }
 
+    public void setEndedAt(LocalDateTime endedAt) {
+        this.endedAt = endedAt;
+    }
+
+    public void setStartedAt(LocalDateTime startedAt) {
+        this.startedAt = startedAt;
+    }
+
+
+
     public int getDurationMinutes() {
         return durationMinutes;
     }

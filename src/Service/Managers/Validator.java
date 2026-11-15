@@ -60,10 +60,7 @@ public final class Validator {
     }
 
     // Check if an enum/state is valid
-    public static void requireState(
-            boolean condition,
-            String message) {
-
+    public static void requireState(boolean condition, String message) {
         if (!condition) {
             throw new IllegalStateException(message);
         }

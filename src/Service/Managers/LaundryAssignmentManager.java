@@ -8,23 +8,18 @@ import Service.DataManager.Repo.CustomerRepo;
 import Service.DataManager.Repo.LaundryStatRepo;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class LaundryAssignmentManager {
         private final LaundryStatRepo laundryRepo = new LaundryStatRepo();
+
     public void registerLaundry(int cstID, double loadWeight, ServiceType st) {
 
         CustomerRepo customerRepo = new CustomerRepo();
-
-        // STEP 1: Validate customer
         Customer customer = Validator.requireExists(customerRepo.findById(cstID), "Customer");
-
-        // STEP 2: Validate weight
         Validator.requirePositive(loadWeight, "Laundry Weight");
-
-        // STEP 3: Validate service type
         Validator.requireExists(st, "Service Type");
 
-        // STEP 4: Determine initial queue
         ServiceStage initialStage = switch (st) {
 
             case FULL_WASH, WASHING_ONLY ->
@@ -34,13 +29,11 @@ public class LaundryAssignmentManager {
                     ServiceStage.QUEUED_DRYER;
         };
 
-        // STEP 5: Record registration time
         LocalDateTime receivedAt = LocalDateTime.now();
 
-        // STEP 6: Create Load object
-        Load load = new Load(0, customer.getCustomerId(), loadWeight, initialStage, receivedAt);
 
-        // STEP 7: Insert into repository
+        Load load = new Load(0, customer.getCustomerId(), loadWeight, initialStage, receivedAt,st);
+
         laundryRepo.addEntry(load);
     }
 
@@ -50,7 +43,7 @@ public class LaundryAssignmentManager {
         Load load = Validator.requireExists(laundryRepo.findById(loadId), "Load ID");
         Validator.requirePositive(newWeight,newWeight + " is too low, please use the recommended weight" );
 
-        Load updLoad = new Load(load.getLoadId(),load.getCstIdFk(),newWeight,load.getLoadStat(),load.getTimestamp());
+        Load updLoad = new Load(load.getLoadId(),load.getCstIdFk(),newWeight,load.getLoadStat(),load.getTimestamp(), load.getServiceType());
 
         laundryRepo.updateEntry(updLoad);
     }
@@ -59,6 +52,8 @@ public class LaundryAssignmentManager {
         Validator.requirePositiveId(loadId, "Load ID");
         Load load = Validator.requireExists(laundryRepo.findById(loadId), "Load ID");
         ServiceStage currentStage = load.getLoadStat();
+
+        Validator.requireExists(updStage, "Service Stage");
 
         boolean validTransition = switch (currentStage) {
 
@@ -91,8 +86,13 @@ public class LaundryAssignmentManager {
             case COMPLETED, CANCELED -> false;
         };
 
-        Load updLoad = new Load(load.getLoadId(),load.getCstIdFk(),load.getLoadWeight(),updStage,load.getTimestamp());
+        Validator.requireState(validTransition, "Status Transition failed from " + currentStage + " to " + updStage);
+        Load updLoad = new Load(load.getLoadId(),load.getCstIdFk(),load.getLoadWeight(),updStage,load.getTimestamp(),load.getServiceType());
         laundryRepo.updateEntryState(updLoad);
 
+    }
+
+    public List<Load> getAllLoadAss(){
+        return laundryRepo.findAll();
     }
 }

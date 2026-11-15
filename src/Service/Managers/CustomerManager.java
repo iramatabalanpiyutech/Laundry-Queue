@@ -30,15 +30,13 @@ public class CustomerManager {
     //not working?
     public void updateCustomer(int cstId, String newName, String newContact){
         CustomerRepo cstRepo = new CustomerRepo();
-        List<Customer> customers = cstR.findAll();
 
-        boolean notFound = customers.stream().noneMatch(cst ->cst.getCustomerId() == cstId);
+        Validator.requirePositiveId(cstId, "Customer ID");
 
-
-        //triggering
-        if(notFound){
-            throw new InsufficientCostumerInformationException("The Customer doesn't Exist");
-        }
+        Customer customer = Validator.requireExists(
+                cstR.findById(cstId),
+                "Customer"
+        );
 
         if (newName == null || newName.trim().isEmpty()) {
             throw new IllegalArgumentException("Please enter the customer's name.");
@@ -53,7 +51,7 @@ public class CustomerManager {
         cstR.updateEntry(new Customer(cstId,newName,newContact));
     }
 
-    void removeCustomer(int cstId){
+    public void removeCustomer(int cstId){
         CustomerRepo cstRepo = new CustomerRepo();
         List<Customer> customers = cstR.findAll();
 

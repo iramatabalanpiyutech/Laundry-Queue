@@ -6,22 +6,19 @@ import java.time.LocalDateTime;
 public class Load {
     private int loadId;
     private int cstIdFk;
-
+    private ServiceType serviceType;
     private double loadWeight;
     private ServiceStage loadStat;
 
     private LocalDateTime timestamp;
 
-    public Load(int loadId, int cstIdFk,
-                double loadWeight,
-                ServiceStage loadStat,
-                LocalDateTime timestamp) {
-
+    public Load(int loadId, int cstIdFk, double loadWeight, ServiceStage loadStat, LocalDateTime timestamp, ServiceType ServiceType) {
         this.loadId = loadId;
         this.cstIdFk = cstIdFk;
         this.loadWeight = loadWeight;
         this.loadStat = loadStat;
         this.timestamp = timestamp;
+        this.serviceType = ServiceType;
     }
 
     public int getLoadId() {
@@ -42,6 +39,10 @@ public class Load {
 
     public LocalDateTime getTimestamp() {
         return timestamp;
+    }
+
+    public ServiceType getServiceType() {
+        return serviceType;
     }
 
     public void setTimestamp(LocalDateTime timestamp) {
