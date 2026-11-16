@@ -140,13 +140,16 @@ public class LaundryStatRepo implements AssRepo<Load> {
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
+                    String serviceType = rs.getString("SERVICE_TYPE");
+                    Timestamp receivedAt = rs.getTimestamp("RECEIVED_AT");
+
                     return new Load(
                             rs.getInt("LOAD_ID"),
                             rs.getInt("CUSTOMER_ID"),
                             rs.getDouble("WEIGHT_KG"),
                             ServiceStage.valueOf(rs.getString("QUEUE_STATUS")),
-                            rs.getTimestamp("RECEIVED_AT").toLocalDateTime(),
-                            ServiceType.valueOf(rs.getString("SERVICE_TYPE"))
+                            receivedAt != null ? receivedAt.toLocalDateTime() : null,
+                            serviceType != null ? ServiceType.valueOf(serviceType) : null
                     );
                 }
             }

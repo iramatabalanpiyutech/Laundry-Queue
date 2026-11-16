@@ -19,7 +19,23 @@ public class MachineAsignmentRepo implements RepoSpecificallyForMachineAss<Machi
                 Connection maConn = DataConnections.getConnection();
                 PreparedStatement maPs = maConn.prepareStatement(sql);
                 ){
+            maPs.setInt(1,item.getLoadId());
+            maPs.setInt(2,item.getMachineId());
+            maPs.setTimestamp(3,
+                    item.getStartedAt() == null
+                            ? null
+                            : Timestamp.valueOf(item.getStartedAt())
+            );
 
+            maPs.setInt(4,item.getDurationMinutes());
+            maPs.setTimestamp(5,
+                    item.getEndedAt() == null
+                            ? null
+                            : Timestamp.valueOf(item.getEndedAt())
+            );
+
+            int row = maPs.executeUpdate();
+            System.out.println("Rows Affected: " + row);
         }catch(SQLException e){
             System.out.println(e.getMessage());
         }
@@ -53,7 +69,8 @@ public class MachineAsignmentRepo implements RepoSpecificallyForMachineAss<Machi
                 PreparedStatement ps = conn.prepareStatement(sql)
         ) {
             // Set parameters here
-            ps.setInt(1, item.getDurationMinutes());
+            ps.setTimestamp(1, Timestamp.valueOf(item.getStartedAt()));
+            ps.setInt(2, item.getAssignmentId());
 
             int rows = ps.executeUpdate();
             System.out.println("Rows affected: " + rows);
@@ -66,7 +83,21 @@ public class MachineAsignmentRepo implements RepoSpecificallyForMachineAss<Machi
 
     @Override
     public void updateStateEnd(MachineAssignment item) {
+        String sql = "UPDATE MACHINE_ASSIGNMENTS SET ENDED_AT = ? WHERE ASSIGNMENT_ID = ?";
+        try (
+                Connection conn = DataConnections.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)
+        ) {
+            // Set parameters here
+            ps.setTimestamp(1, Timestamp.valueOf(item.getEndedAt()));
+            ps.setInt(2, item.getAssignmentId());
 
+            int rows = ps.executeUpdate();
+            System.out.println("Rows affected: " + rows);
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
 

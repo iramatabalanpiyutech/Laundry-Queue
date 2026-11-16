@@ -7,11 +7,20 @@ import Service.DataManager.Repo.MachineAsignmentRepo;
 import Service.DataManager.Repo.MachineRepo;
 import Service.Exception.UnavailableMachineException;
 
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.LocalDateTime;
+
 public class MachineAssignmentManager {
-    private LaundryStatRepo laundryStatRepo;
-    private MachineRepo machineRepo;
-    private MachineAsignmentRepo mar;
+    public LaundryStatRepo laundryStatRepo = new LaundryStatRepo();
+    public MachineRepo machineRepo = new MachineRepo();
+    public MachineAsignmentRepo mar = new MachineAsignmentRepo();
+
+    public MachineManager mm = new MachineManager();
+    public LaundryAssignmentManager lam = new LaundryAssignmentManager();
     private final int TEMP_ID = 0;
+    private final int DRYER_DURATION = 40;
+
 
     public void assignMachine(int loadId, int machineId, int durationMinutes) {
         // STEP 1: Validate input
@@ -32,6 +41,10 @@ public class MachineAssignmentManager {
         }
 
         // STEP 4: Check machine capacity
+        System.out.println("Machine ID: " + machine.getMachineId());
+        System.out.println("Machine Capacity: " + machine.getMachineCapacity());
+        System.out.println("Load Weight: " + load.getLoadWeight());
+
         if(machine.getMachineCapacity() < load.getLoadWeight()){
             throw new IllegalArgumentException("Weight is over the recommended washer/dryer capacity");
         }
@@ -39,7 +52,7 @@ public class MachineAssignmentManager {
         boolean chkStat = switch (load.getLoadStat()) {
             case QUEUED_WASHER ->
                     machine.getMachineType() == MachineType.WASHER;
-            case QUEUED_DRYER ->
+            case QUEUED_DRYER, TRANSFER ->
                     machine.getMachineType() == MachineType.DRYER;
 
             default -> false;
@@ -47,96 +60,212 @@ public class MachineAssignmentManager {
 
         if(!chkStat){
             throw new IllegalArgumentException("Machine type does not match load queue status.");
+        }else{
+            machine.setMachineState(MachineState.IN_USE);
         }
+
         // STEP 6: Check neither is already assigned
         boolean loadAssigned = mar.hasActiveLoadAssignment(load.getLoadId());
         boolean machineAssigned = mar.hasActiveMachineAssignment(machine.getMachineId());
         Validator.requireState(!loadAssigned, "Load is already assigned!");
         Validator.requireState(!machineAssigned,"Machine is already occupied!");
+
         // STEP 7: Create assignment and update states
         MachineAssignment machineAssignment = new MachineAssignment(TEMP_ID,load.getLoadId(),machine.getMachineId(),null,durationMinutes,null);
         mar.addEntry(machineAssignment);
     }
 
-    // TODO 2: Start washing/drying session
+
     public void startSession(int assignmentId) {
-        // TODO: Retrieve machine assignment
-        // TODO: Retrieve associated machine and load
-        // TODO: Validate assignment exists
-        // TODO: Verify session hasn't started or ended
-        // TODO: Determine operation duration
-        // TODO: Set STARTED_AT to current timestamp
-        // TODO: Set machine state to IN_USE
-        // TODO: Set load state to WASHING or DRYING
-        // TODO: Save changes in one transaction
+        MachineAssignment machineAssignment = Validator.requireExists(mar.findById(assignmentId), "Machine Assignment");
+        Load load = Validator.requireExists(laundryStatRepo.findById(machineAssignment.getLoadId()), "Load");
+        Machine machine = Validator.requireExists(machineRepo.findById(machineAssignment.getMachineId()),"Machine");
+        Validator.requireState(machineAssignment.getStartedAt() == null && machineAssignment.getEndedAt() == null, "Session is already started!");
+        Validator.requirePositive(machineAssignment.getDurationMinutes(), "The Duration is SOMEHOW NEGATIVE??! HOW??!!");
+
+
+        if (machine.getMachineType() == MachineType.WASHER) {
+            lam.updateLoadState(
+                    machineAssignment.getLoadId(),
+                    ServiceStage.WASHING
+            );
+
+        } else if (machine.getMachineType() == MachineType.DRYER) {
+            lam.updateLoadState(
+                    machineAssignment.getLoadId(),
+                    ServiceStage.DRYING
+            );
+        }
+
+        machineAssignment.setStartedAt(LocalDateTime.now());
+        mar.updateStateStart(machineAssignment);
     }
 
-    // TODO 3: Get remaining session time
     public long getRemainingSeconds(int assignmentId) {
-        // TODO: Retrieve assignment
-        // TODO: Retrieve operation duration
-        // TODO: Calculate expected completion time
-        // TODO: Calculate remaining seconds
-        // TODO: Return 0 if time has expired
-        return 0;
+        MachineAssignment ma = Validator.requireExists(mar.findById(assignmentId), "Machine Assignment");
+        Validator.requireState(ma.getStartedAt() != null, "Session hasn't started!");
+        LocalDateTime expectedEnd = ma.getStartedAt().plusMinutes(ma.getDurationMinutes());
+        long remaining = Duration.between(LocalDateTime.now(), expectedEnd).getSeconds();
+
+
+        return Math.max(0, remaining);
     }
 
-    // TODO 4: Complete washing/drying session
     public void completeSession(int assignmentId) {
-        // TODO: Retrieve assignment, machine, and load
-        // TODO: Validate session is active
-        // TODO: Verify completion conditions
-        // TODO: Set ENDED_AT to current timestamp
-        // TODO: Update machine availability
-        // TODO: If washer, move load to dryer queue/transfer state
-        // TODO: If dryer, mark load COMPLETED
-        // TODO: Save all changes in one transaction
+
+        // STEP 1: Retrieve records
+        MachineAssignment ma = Validator.requireExists(mar.findById(assignmentId), "Machine Assignment");
+
+        Load load = Validator.requireExists(laundryStatRepo.findById(ma.getLoadId()), "Load");
+
+        Machine machine = Validator.requireExists(machineRepo.findById(ma.getMachineId()), "Machine");
+
+        // STEP 2: Validate session
+        Validator.requireState(ma.getStartedAt() != null && ma.getEndedAt() == null, "Session is not active!");
+
+        Validator.requireState(getRemainingSeconds(assignmentId) == 0, "Session is still running!");
+
+        // STEP 3: Record completion
+        ma.setEndedAt(LocalDateTime.now());
+        mar.updateStateEnd(ma);
+
+        // STEP 4: Release machine if necessary
+        if (machine.getMachineState() != MachineState.AVAILABLE) {
+            mm.updateMachineState(machine.getMachineId(), MachineState.AVAILABLE);
+        }
+
+        // STEP 5: Update load status
+        if (machine.getMachineType() == MachineType.WASHER) {
+
+            if (load.getServiceType() == ServiceType.FULL_WASH) {
+                lam.updateLoadState(ma.getLoadId(), ServiceStage.TRANSFER);
+            } else {
+                lam.updateLoadState(ma.getLoadId(), ServiceStage.COMPLETED);
+            }
+
+        } else if (machine.getMachineType() == MachineType.DRYER) {
+
+            lam.updateLoadState(ma.getLoadId(), ServiceStage.COMPLETED  );
+        }
     }
 
-    // TODO 5: Transfer washed laundry to dryer
+
     public void transferLoad(int loadId, int dryerId) {
-        // TODO: Retrieve load and dryer
-        // TODO: Verify washing has finished
-        // TODO: Check dryer availability
-        // TODO: Verify dryer type
-        // TODO: Ensure no conflicting active assignments
-        // TODO: Apply your washer-to-top-dryer business rule
-        // TODO: Create dryer assignment
-        // TODO: Update load and machine states
-        // TODO: Save changes atomically
+
+        Load load = Validator.requireExists(laundryStatRepo.findById(loadId), "Load");
+        Machine dryer = Validator.requireExists(machineRepo.findById(dryerId), "Dryer");
+        Validator.requireState(dryer.getMachineState() == MachineState.AVAILABLE, "Dryer is unavailable!");
+        Validator.requireState(dryer.getMachineCapacity() >= load.getLoadWeight(), "Load exceeds dryer capacity!");
+        Validator.requireState(!mar.hasActiveMachineAssignment(dryerId), "Dryer already has an active assignment!");
+
+        Validator.requireState(load.getLoadStat() == ServiceStage.TRANSFER, "Session isn't finished yet");
+        Validator.requireState(dryer.getMachineType() == MachineType.DRYER,"The Machine You Chose is not a Dryer");
+        Validator.requireState(load.getServiceType() == ServiceType.FULL_WASH, "Invalid Service Type");
+
+
+        assignMachine(loadId, dryerId, DRYER_DURATION);
+        lam.updateLoadState(loadId, ServiceStage.QUEUED_DRYER);
     }
 
-    // TODO 6: Handle machine interruption
     public void interruptSession(int assignmentId) {
-        // TODO: Retrieve active assignment
-        // TODO: Verify session is running
-        // TODO: Record interruption time
-        // TODO: End or suspend assignment according to business rules
+
+        MachineAssignment ma = Validator.requireExists(
+                mar.findById(assignmentId),
+                "Machine Assignment"
+        );
+
+        Load load = Validator.requireExists(
+                laundryStatRepo.findById(ma.getLoadId()),
+                "Load"
+        );
+
+        Machine machine = Validator.requireExists(
+                machineRepo.findById(ma.getMachineId()),
+                "Machine"
+        );
+
+        Validator.requireState(ma.getStartedAt() != null && ma.getEndedAt() == null, "Cannot interrupt an inactive session!");
+
+        // TODO: Record interruption timestamp
+        // TODO: Decide whether assignment ends or suspends
         // TODO: Update machine state
-        // TODO: Update load state to MACHINE_BROKE_INTERRUPTION
-        // TODO: Save changes
+        // TODO: Update load to MACHINE_BROKE_INTERRUPTION
+        // TODO: Save changes atomically
     }
 
     // TODO 7: Reassign interrupted laundry
     public void reassignLoad(int loadId, int newMachineId) {
-        // TODO: Retrieve interrupted load
-        // TODO: Retrieve replacement machine
-        // TODO: Validate machine compatibility
-        // TODO: Check availability
-        // TODO: Ensure previous assignment is closed
-        // TODO: Decide how remaining duration is preserved
+
+        Load load = Validator.requireExists(
+                laundryStatRepo.findById(loadId),
+                "Load"
+        );
+
+        Machine machine = Validator.requireExists(
+                machineRepo.findById(newMachineId),
+                "Replacement Machine"
+        );
+
+        Validator.requireState(
+                load.getLoadStat() == ServiceStage.MACHINE_BROKE_INTERRUPTION,
+                "Load is not interrupted!"
+        );
+
+        Validator.requireState(
+                machine.getMachineState() == MachineState.AVAILABLE,
+                "Replacement machine is unavailable!"
+        );
+
+        Validator.requireState(
+                machine.getMachineCapacity() >= load.getLoadWeight(),
+                "Load exceeds machine capacity!"
+        );
+
+        Validator.requireState(
+                !mar.hasActiveMachineAssignment(newMachineId),
+                "Replacement machine is occupied!"
+        );
+
+        // TODO: Verify machine type compatibility
+        // TODO: Verify previous assignment is closed
+        // TODO: Calculate remaining duration
         // TODO: Create replacement assignment
-        // TODO: Update relevant states
-        // TODO: Save changes atomically
+        // TODO: Update states atomically
     }
 
     // TODO 8: Cancel laundry assignment
     public void cancelAssignment(int assignmentId) {
-        // TODO: Retrieve assignment
-        // TODO: Check whether cancellation is allowed
-        // TODO: End active assignment if applicable
-        // TODO: Update load state to CANCELED
-        // TODO: Release machine when appropriate
+
+        MachineAssignment ma = Validator.requireExists(
+                mar.findById(assignmentId),
+                "Machine Assignment"
+        );
+
+        Load load = Validator.requireExists(
+                laundryStatRepo.findById(ma.getLoadId()),
+                "Load"
+        );
+
+        Machine machine = Validator.requireExists(
+                machineRepo.findById(ma.getMachineId()),
+                "Machine"
+        );
+
+        Validator.requireState(
+                ma.getEndedAt() == null,
+                "Assignment is already closed!"
+        );
+
+
+        Validator.requireState(
+                load.getLoadStat() != ServiceStage.COMPLETED,
+                "Cannot cancel a completed load!"
+        );
+
+        // TODO: Determine whether running sessions can be canceled
+        // TODO: Record cancellation/closure
+        // TODO: Update load to CANCELED
+        // TODO: Release machine
         // TODO: Save changes atomically
     }
 }

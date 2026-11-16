@@ -53,7 +53,7 @@ public class Load {
         this.cstIdFk = cstIdFk;
     }
 
-    public void setLoadId(int loadId) {
-        this.loadId = loadId;
+    public void setLoadStat(ServiceStage loadStat) {
+        this.loadStat = loadStat;
     }
 }
