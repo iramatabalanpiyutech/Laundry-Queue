@@ -7,6 +7,7 @@ public enum ServiceStage {
     TRANSFER("Transfer"),
     DRYING("Drying"),
     COMPLETED("Completed"),
+
     CANCELED("Canceled"),
     MACHINE_BROKE_INTERRUPTION("Machine_broke_interruption");
 

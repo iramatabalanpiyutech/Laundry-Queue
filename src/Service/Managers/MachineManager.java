@@ -32,7 +32,7 @@ public class MachineManager{
 
 
        boolean validTransition = switch (currentState){
-           case AVAILABLE -> newState == MachineState.IN_USE || newState == MachineState.MAINTENANCE || newState == MachineState.RETIRED;
+           case AVAILABLE -> newState == MachineState.IN_USE || newState == MachineState.MAINTENANCE || newState == MachineState.OUT_OF_SERVICE || newState == MachineState.RETIRED;
            case IN_USE -> newState == MachineState.AVAILABLE || newState == MachineState.OUT_OF_SERVICE;
            case MAINTENANCE -> newState == MachineState.AVAILABLE || newState == MachineState.OUT_OF_SERVICE;
            case OUT_OF_SERVICE -> newState == MachineState.MAINTENANCE || newState == MachineState.RETIRED;

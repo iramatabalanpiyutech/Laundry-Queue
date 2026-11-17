@@ -6,89 +6,57 @@ import java.util.Scanner;
 
 public class Quarantine {
 
-    private static final Scanner scanner = new Scanner(System.in);
-
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) {
 
         MachineAssignmentManager mam = new MachineAssignmentManager();
+        Scanner scanner = new Scanner(System.in);
 
-        int loadId = 91;
-        int washerAssignmentId = 11;
-        int dryerAssignmentId = 12;
+        int fullWashLoadId = 94;
+        int dryerOnlyLoadId = 95;
+
+        int washerId = 61;
         int dryerId = 31;
 
-        System.out.println("=== FULL WASH INTEGRATION TEST ===");
+        System.out.println("=== INTERRUPTION TEST ===");
 
-        // STEP 1: Washer assignment already exists
-        System.out.println("\n[1] Washer Assignment: 11");
-        pause();
+        // TEST 1: FULL_WASH
+        System.out.println("\n[1] FULL_WASH INTERRUPTION");
 
-        // STEP 2: Start washing
+        mam.assignMachine(fullWashLoadId, washerId, 10);
+
+        System.out.print("Enter new washer assignment ID: ");
+        int washerAssignmentId = Integer.parseInt(scanner.nextLine());
+
         mam.startSession(washerAssignmentId);
-        System.out.println("[2] Washing started!");
-        pause();
 
-        // STEP 3: Wait for washing
-        waitForCompletion(mam, washerAssignmentId);
-
-        // STEP 4: Complete washing
-        mam.completeSession(washerAssignmentId);
-        System.out.println("[3] Washing completed!");
-        System.out.println("Expected load state: TRANSFER");
-        pause();
-
-        // STEP 5: Transfer to dryer
-        mam.transferLoad(loadId, dryerId);
-        System.out.println("[4] Dryer assignment created!");
-        System.out.println("Expected assignment ID: 12");
-        System.out.println("Expected load state: QUEUED_DRYER");
-        pause();
-
-        // STEP 6: Start dryer
-        mam.startSession(dryerAssignmentId);
-        System.out.println("[5] Drying started!");
-        pause();
-
-        // STEP 7: Wait for drying
-        waitForCompletion(mam, dryerAssignmentId);
-
-        // STEP 8: Complete dryer
-        mam.completeSession(dryerAssignmentId);
-        System.out.println("[6] Drying completed!");
-        System.out.println("Expected load state: COMPLETED");
-
-        System.out.println("\n=== FULL WASH TEST FINISHED ===");
-    }
-
-    private static void pause() {
-        System.out.println("\nPress ENTER to continue...");
+        System.out.println("Washing started.");
+        System.out.println("Press ENTER to simulate breakdown.");
         scanner.nextLine();
-    }
 
-    private static void waitForCompletion(
-            MachineAssignmentManager mam,
-            int assignmentId
-    ) throws InterruptedException {
+        mam.interruptSession(washerAssignmentId);
 
-        long remaining;
+        System.out.println("FULL_WASH interruption successful!");
 
-        do {
-            remaining = mam.getRemainingSeconds(assignmentId);
+        // TEST 2: DRYER_ONLY
+        System.out.println("\n[2] DRYER_ONLY INTERRUPTION");
 
-            System.out.printf(
-                    "\rTime Remaining: %02d:%02d",
-                    remaining / 60,
-                    remaining % 60
-            );
+        mam.assignMachine(dryerOnlyLoadId, dryerId, 10);
 
-            System.out.flush();
+        System.out.print("Enter new dryer assignment ID: ");
+        int dryerAssignmentId = Integer.parseInt(scanner.nextLine());
 
-            if (remaining > 0) {
-                Thread.sleep(1000);
-            }
+        mam.startSession(dryerAssignmentId);
 
-        } while (remaining > 0);
+        System.out.println("Drying started.");
+        System.out.println("Press ENTER to simulate breakdown.");
+        scanner.nextLine();
 
-        System.out.println();
+        mam.interruptSession(dryerAssignmentId);
+
+        System.out.println("DRYER_ONLY interruption successful!");
+
+        System.out.println("\n=== ALL TESTS FINISHED ===");
+
+        scanner.close();
     }
 }

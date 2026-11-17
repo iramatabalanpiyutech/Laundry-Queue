@@ -169,66 +169,36 @@ public class MachineAssignmentManager {
 
     public void interruptSession(int assignmentId) {
 
-        MachineAssignment ma = Validator.requireExists(
-                mar.findById(assignmentId),
-                "Machine Assignment"
-        );
-
-        Load load = Validator.requireExists(
-                laundryStatRepo.findById(ma.getLoadId()),
-                "Load"
-        );
-
-        Machine machine = Validator.requireExists(
-                machineRepo.findById(ma.getMachineId()),
-                "Machine"
-        );
-
+        MachineAssignment ma = Validator.requireExists(mar.findById(assignmentId), "Machine Assignment");
+        Load load = Validator.requireExists(laundryStatRepo.findById(ma.getLoadId()), "Load");
+        Machine machine = Validator.requireExists(machineRepo.findById(ma.getMachineId()), "Machine");
         Validator.requireState(ma.getStartedAt() != null && ma.getEndedAt() == null, "Cannot interrupt an inactive session!");
 
-        // TODO: Record interruption timestamp
-        // TODO: Decide whether assignment ends or suspends
-        // TODO: Update machine state
-        // TODO: Update load to MACHINE_BROKE_INTERRUPTION
-        // TODO: Save changes atomically
+        ma.setEndedAt(LocalDateTime.now());
+        mar.updateStateEnd(ma);
+        mm.updateMachineState(machine.getMachineId(), MachineState.OUT_OF_SERVICE);
+        lam.updateLoadState(load.getLoadId(),ServiceStage.MACHINE_BROKE_INTERRUPTION);
     }
 
     // TODO 7: Reassign interrupted laundry
-    public void reassignLoad(int loadId, int newMachineId) {
+    public void reassignLoad(int loadId, int newMachineId, MachineType interruptedType) {
 
-        Load load = Validator.requireExists(
-                laundryStatRepo.findById(loadId),
-                "Load"
-        );
-
-        Machine machine = Validator.requireExists(
-                machineRepo.findById(newMachineId),
-                "Replacement Machine"
-        );
-
-        Validator.requireState(
-                load.getLoadStat() == ServiceStage.MACHINE_BROKE_INTERRUPTION,
-                "Load is not interrupted!"
-        );
-
-        Validator.requireState(
-                machine.getMachineState() == MachineState.AVAILABLE,
-                "Replacement machine is unavailable!"
-        );
-
-        Validator.requireState(
-                machine.getMachineCapacity() >= load.getLoadWeight(),
-                "Load exceeds machine capacity!"
-        );
-
-        Validator.requireState(
-                !mar.hasActiveMachineAssignment(newMachineId),
-                "Replacement machine is occupied!"
-        );
+        Load load = Validator.requireExists(laundryStatRepo.findById(loadId), "Load");
+        Machine machine = Validator.requireExists(machineRepo.findById(newMachineId), "Replacement Machine");
+        Validator.requireState(load.getLoadStat() == ServiceStage.MACHINE_BROKE_INTERRUPTION, "Load is not interrupted!");
+        Validator.requireState(machine.getMachineState() == MachineState.AVAILABLE, "Replacement machine is unavailable!");
+        Validator.requireState(machine.getMachineCapacity() >= load.getLoadWeight(), "Load exceeds machine capacity!");
+        Validator.requireState(!mar.hasActiveMachineAssignment(newMachineId), "Replacement machine is occupied!");
 
         // TODO: Verify machine type compatibility
+        switch (interruptedType){
+            case WASHER -> load.setLoadStat(ServiceStage.QUEUED_WASHER);
+            case DRYER -> load.setLoadStat(ServiceStage.QUEUED_DRYER);
+        }
         // TODO: Verify previous assignment is closed
+        Validator.requireState(load.getLoadStat() == ServiceStage.MACHINE_BROKE_INTERRUPTION, "Session was not interrupted but canceled");
         // TODO: Calculate remaining duration
+
         // TODO: Create replacement assignment
         // TODO: Update states atomically
     }

@@ -41,19 +41,33 @@ public class MachineRepo implements RepoButWithFindByID<Machine> {
 
     @Override
     public void updateEntry(Machine item) {
+
         String sql = "UPDATE MACHINES SET OPERATIONAL_STATUS = ? WHERE MACHINE_ID = ?";
 
-        try(
-            Connection con = DataConnections.getConnection();
-            PreparedStatement ps = con.prepareStatement(sql);
-                ){
+        try (
+                Connection con = DataConnections.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)
+        ) {
+            ps.setString(1, item.getMachineState().name());
+            ps.setInt(2, item.getMachineId());
 
-                ps.setString(1,item.getMachineState().name());
-                ps.setInt(2,item.getMachineId());
-                int rows = ps.executeUpdate();
+            int rows = ps.executeUpdate();
 
-        }catch (SQLException e){
-            System.out.println(e.getMessage());
+            if (rows != 1) {
+                throw new IllegalStateException(
+                        "Machine update failed! Rows affected: " + rows
+                );
+            }
+
+            System.out.println(
+                    "Machine " + item.getMachineId() +
+                            " updated to " + item.getMachineState()
+            );
+
+        } catch (SQLException e) {
+            throw new RuntimeException(
+                    "Failed to update machine state!", e
+            );
         }
     }
 
