@@ -33,8 +33,7 @@ public class MachineAssignmentManager {
         Machine machine = Validator.requireExists(machineRepo.findById(machineId), "The Machine you somehow Assigned doesn't exist");
 
         // STEP 3: Check machine availability
-        boolean isAvailable =
-                machine.getMachineState() == MachineState.AVAILABLE;
+        boolean isAvailable = machine.getMachineState() == MachineState.AVAILABLE;
         
         if(!isAvailable){
             throw new UnavailableMachineException("Machine Chosen is Not Available");
@@ -73,6 +72,7 @@ public class MachineAssignmentManager {
         // STEP 7: Create assignment and update states
         MachineAssignment machineAssignment = new MachineAssignment(TEMP_ID,load.getLoadId(),machine.getMachineId(),null,durationMinutes,null);
         mar.addEntry(machineAssignment);
+        mm.updateMachineState(machine.getMachineId(), MachineState.IN_USE);
     }
 
 
@@ -180,62 +180,66 @@ public class MachineAssignmentManager {
         lam.updateLoadState(load.getLoadId(),ServiceStage.MACHINE_BROKE_INTERRUPTION);
     }
 
-    // TODO 7: Reassign interrupted laundry
-    public void reassignLoad(int loadId, int newMachineId, MachineType interruptedType) {
 
+    public void reassignLoad(int loadId, int newMachineId, int assignmentId, MachineType interruptedType) {
         Load load = Validator.requireExists(laundryStatRepo.findById(loadId), "Load");
         Machine machine = Validator.requireExists(machineRepo.findById(newMachineId), "Replacement Machine");
+        MachineAssignment machineAssignment = Validator.requireExists(mar.findById(assignmentId), "Assigned machine");
+
+        // STEP 1: Validate interruption
         Validator.requireState(load.getLoadStat() == ServiceStage.MACHINE_BROKE_INTERRUPTION, "Load is not interrupted!");
+        Validator.requireState(machineAssignment.getLoadId() == loadId, "Assignment does not belong to this load!");
+
+        // STEP 2: Verify previous assignment is closed
+        Validator.requireState(machineAssignment.getEndedAt() != null, "Previous assignment is not closed!");
+        Validator.requireState(!mar.hasActiveLoadAssignment(loadId), "Load still has an active assignment!");
+
+        // STEP 3: Validate replacement machine
         Validator.requireState(machine.getMachineState() == MachineState.AVAILABLE, "Replacement machine is unavailable!");
         Validator.requireState(machine.getMachineCapacity() >= load.getLoadWeight(), "Load exceeds machine capacity!");
         Validator.requireState(!mar.hasActiveMachineAssignment(newMachineId), "Replacement machine is occupied!");
+        Validator.requireState(machine.getMachineType() == interruptedType, "Replacement machine type is incompatible!");
 
-        // TODO: Verify machine type compatibility
-        switch (interruptedType){
-            case WASHER -> load.setLoadStat(ServiceStage.QUEUED_WASHER);
-            case DRYER -> load.setLoadStat(ServiceStage.QUEUED_DRYER);
-        }
-        // TODO: Verify previous assignment is closed
-        Validator.requireState(load.getLoadStat() == ServiceStage.MACHINE_BROKE_INTERRUPTION, "Session was not interrupted but canceled");
-        // TODO: Calculate remaining duration
+        // STEP 4: Calculate remaining duration
+        LocalDateTime start = machineAssignment.getStartedAt();
+        LocalDateTime end = machineAssignment.getEndedAt();
 
-        // TODO: Create replacement assignment
-        // TODO: Update states atomically
+        long elapsedTime = Duration.between(start, end).toMinutes();
+        long remainingTime = Math.max(0, machineAssignment.getDurationMinutes() - elapsedTime);
+        Validator.requireState(remainingTime > 0, "No remaining duration to reassign!");
+
+        // STEP 5: Create replacement assignment
+        assignMachine(loadId, newMachineId, (int) remainingTime);
     }
 
-    // TODO 8: Cancel laundry assignment
+
     public void cancelAssignment(int assignmentId) {
 
-        MachineAssignment ma = Validator.requireExists(
-                mar.findById(assignmentId),
-                "Machine Assignment"
-        );
+        MachineAssignment ma = Validator.requireExists(mar.findById(assignmentId), "Machine Assignment");
+        Load load = Validator.requireExists(laundryStatRepo.findById(ma.getLoadId()), "Load");
+        Machine machine = Validator.requireExists(machineRepo.findById(ma.getMachineId()), "Machine");
 
-        Load load = Validator.requireExists(
-                laundryStatRepo.findById(ma.getLoadId()),
-                "Load"
-        );
+        // STEP 1: Validate cancellation
+        Validator.requireState(ma.getStartedAt() == null, "Cannot cancel a started session!");
+        Validator.requireState(ma.getEndedAt() == null, "Assignment is already closed!");
+        Validator.requireState(load.getLoadStat() != ServiceStage.COMPLETED, "Cannot cancel a completed load!");
 
-        Machine machine = Validator.requireExists(
-                machineRepo.findById(ma.getMachineId()),
-                "Machine"
-        );
+        // STEP 2: Restore queue status
+        switch (machine.getMachineType()) {
+            case WASHER ->
+                    load.setLoadStat(ServiceStage.QUEUED_WASHER);
 
-        Validator.requireState(
-                ma.getEndedAt() == null,
-                "Assignment is already closed!"
-        );
+            case DRYER ->
+                    load.setLoadStat(ServiceStage.QUEUED_DRYER);
+        }
 
+        // STEP 3: Release machine
+        machine.setMachineState(MachineState.AVAILABLE);
 
-        Validator.requireState(
-                load.getLoadStat() != ServiceStage.COMPLETED,
-                "Cannot cancel a completed load!"
-        );
+        // STEP 4: Persist changes
+        mar.deleteEntry(assignmentId);
 
-        // TODO: Determine whether running sessions can be canceled
-        // TODO: Record cancellation/closure
-        // TODO: Update load to CANCELED
-        // TODO: Release machine
-        // TODO: Save changes atomically
+        laundryStatRepo.updateEntry(load);
+        machineRepo.updateEntry(machine);
     }
 }

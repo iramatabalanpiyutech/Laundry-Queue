@@ -34,7 +34,7 @@ public class MachineRepo implements RepoButWithFindByID<Machine> {
             }
 
         }catch (SQLException e){
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to insert machine", e);
         }
 
     }
@@ -84,7 +84,7 @@ public class MachineRepo implements RepoButWithFindByID<Machine> {
             System.out.println(rows);
 
         }catch (SQLException e){
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to delete machine", e);
         }
 
     }
@@ -140,7 +140,7 @@ public class MachineRepo implements RepoButWithFindByID<Machine> {
             }
 
         }catch (SQLException e){
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to load machines", e);
         }
         return machines;
     }

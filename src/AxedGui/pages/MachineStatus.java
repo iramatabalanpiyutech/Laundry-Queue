@@ -1,4 +1,4 @@
-package gui.pages;
+package AxedGui.pages;
 
 import javax.swing.*;
 import java.awt.*;

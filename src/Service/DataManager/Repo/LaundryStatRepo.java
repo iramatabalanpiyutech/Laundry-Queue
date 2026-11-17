@@ -12,11 +12,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LaundryStatRepo implements AssRepo<Load> {
-    CustomerRepo cr = new CustomerRepo();
-    List<Customer> lCst = cr.findAll();
-    Customer selected = lCst.get(0);
-
+public class LaundryStatRepo implements LoadRepo<Load> {
     @Override
     public void addEntry(Load item) {
         String sql = "INSERT INTO LAUNDRY_LOADS(CUSTOMER_ID, WEIGHT_KG, QUEUE_STATUS, RECEIVED_AT, SERVICE_TYPE) VALUES (?,?,?,?,?)";
@@ -33,14 +29,14 @@ public class LaundryStatRepo implements AssRepo<Load> {
             System.out.println("Rows affected: " + row );
 
         }catch (SQLException e){
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to insert laundry load", e);
         }
 
     }
 
     @Override
     public void updateEntry(Load item) {
-        String sql = "UPDATE LAUNDRY_LOADS SET WEIGHT_KG = ? WHERE LOAD_ID = ?";
+        String sql = "UPDATE LAUNDRY_LOADS SET WEIGHT_KG = ?, QUEUE_STATUS = ? WHERE LOAD_ID = ?";
 
         try (
             Connection conn = DataConnections.getConnection();
@@ -48,13 +44,14 @@ public class LaundryStatRepo implements AssRepo<Load> {
         ) {
             // Set parameters here
             ps.setDouble(1, item.getLoadWeight());
-            ps.setInt(2,item.getLoadId());
+            ps.setString(2, item.getLoadStat().name());
+            ps.setInt(3,item.getLoadId());
 
             int rows = ps.executeUpdate();
             System.out.println("Rows affected: " + rows);
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to update laundry load", e);
         }
 
     }
@@ -75,7 +72,7 @@ public class LaundryStatRepo implements AssRepo<Load> {
             System.out.println("Rows affected: " + rows);
         
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to update laundry load state", e);
         }
         
     }
@@ -93,14 +90,14 @@ public class LaundryStatRepo implements AssRepo<Load> {
             System.out.println(rows);
 
         }catch (SQLException e){
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to delete laundry load", e);
         }
     }
 
     @Override
     public List<Load> findAll() {
 
-        String sql = "SELECT LOAD_ID,CUSTOMER_ID,WEIGHT_KG,QUEUE_STATUS,RECEIVED_AT FROM LAUNDRY_LOADS ORDER BY RECEIVED_AT";
+        String sql = "SELECT LOAD_ID,CUSTOMER_ID,WEIGHT_KG,QUEUE_STATUS,RECEIVED_AT,SERVICE_TYPE FROM LAUNDRY_LOADS ORDER BY RECEIVED_AT";
         List<Load> loadAss = new ArrayList<>();
         try (
             Connection conn = DataConnections.getConnection();
@@ -109,23 +106,82 @@ public class LaundryStatRepo implements AssRepo<Load> {
         ) {
 
                 while (rs.next()) {
-                    Object recieveAt;
                     loadAss.add(new Load(
                             rs.getInt("LOAD_ID"),
                             rs.getInt("CUSTOMER_ID"),
                             rs.getDouble("WEIGHT_KG"),
                             ServiceStage.valueOf(rs.getString("QUEUE_STATUS")),
-                            rs.getTimestamp("RECEIVE_AT").toLocalDateTime(),
+                            rs.getTimestamp("RECEIVED_AT").toLocalDateTime(),
                             ServiceType.valueOf(rs.getString("SERVICE_TYPE"))
                     ));
                 }
 
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to load laundry records", e);
         }
 
         return loadAss;
+    }
+
+    @Override
+    public List<Load> findWasherQueue() {
+        String sql = "SELECT * FROM LAUNDRY_LOADS WHERE QUEUE_STATUS = 'QUEUED_WASHER' ORDER BY RECEIVED_AT = ?, LOAD_ID = ?";
+        List<Load> loadQueueWasher = new ArrayList<>();
+        try (
+                Connection conn = DataConnections.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql);
+                ResultSet rs = ps.executeQuery();
+        ) {
+
+            while (rs.next()) {
+                Object recieveAt;
+                loadQueueWasher.add(new Load(
+                        rs.getInt("LOAD_ID"),
+                        rs.getInt("CUSTOMER_ID"),
+                        rs.getDouble("WEIGHT_KG"),
+                        ServiceStage.valueOf(rs.getString("QUEUE_STATUS")),
+                        rs.getTimestamp("RECEIVE_AT").toLocalDateTime(),
+                        ServiceType.valueOf(rs.getString("SERVICE_TYPE"))
+                ));
+            }
+
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to load washer queue", e);
+        }
+
+        return loadQueueWasher;
+    }
+
+    @Override
+    public List<Load> findDryerQueue() {
+        String sql = "SELECT * FROM LAUNDRY_LOADS WHERE QUEUE_STATUS = 'QUEUED_DRYER' ORDER BY RECEIVED_AT = ?, LOAD_ID = ?";
+        List<Load> loadQueueDryer = new ArrayList<>();
+        try (
+                Connection conn = DataConnections.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql);
+                ResultSet rs = ps.executeQuery();
+        ) {
+
+            while (rs.next()) {
+                Object recieveAt;
+                loadQueueDryer.add(new Load(
+                        rs.getInt("LOAD_ID"),
+                        rs.getInt("CUSTOMER_ID"),
+                        rs.getDouble("WEIGHT_KG"),
+                        ServiceStage.valueOf(rs.getString("QUEUE_STATUS")),
+                        rs.getTimestamp("RECEIVE_AT").toLocalDateTime(),
+                        ServiceType.valueOf(rs.getString("SERVICE_TYPE"))
+                ));
+            }
+
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to load dryer queue", e);
+        }
+
+        return loadQueueDryer;
     }
 
     @Override
@@ -155,7 +211,7 @@ public class LaundryStatRepo implements AssRepo<Load> {
             }
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to find laundry load", e);
         }
 
         return null;

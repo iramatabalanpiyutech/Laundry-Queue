@@ -32,7 +32,7 @@ public class CustomerRepo implements RepoButWithFindByID<Customer> {
             }
 
         }catch(SQLException se){
-            System.out.println(se.getMessage());
+            throw new RuntimeException("Failed to insert customer", se);
         }
     }
 
@@ -72,7 +72,7 @@ public class CustomerRepo implements RepoButWithFindByID<Customer> {
 
 
         }catch (SQLException e){
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to delete customer", e);
         }
     }
 
@@ -97,7 +97,7 @@ public class CustomerRepo implements RepoButWithFindByID<Customer> {
             }
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to find customer", e);
         }
 
         return null;
@@ -125,7 +125,7 @@ public class CustomerRepo implements RepoButWithFindByID<Customer> {
 
             }
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to load customers", e);
         }
 
         return customers;

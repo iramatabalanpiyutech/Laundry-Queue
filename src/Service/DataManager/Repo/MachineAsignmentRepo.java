@@ -37,7 +37,7 @@ public class MachineAsignmentRepo implements RepoSpecificallyForMachineAss<Machi
             int row = maPs.executeUpdate();
             System.out.println("Rows Affected: " + row);
         }catch(SQLException e){
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to insert machine assignment", e);
         }
         
     }
@@ -56,7 +56,7 @@ public class MachineAsignmentRepo implements RepoSpecificallyForMachineAss<Machi
                 System.out.println("Rows affected: " + rows);
 
             } catch (SQLException e) {
-                System.out.println(e.getMessage());
+                throw new RuntimeException("Failed to update machine assignment", e);
             }
 
     }
@@ -76,7 +76,7 @@ public class MachineAsignmentRepo implements RepoSpecificallyForMachineAss<Machi
             System.out.println("Rows affected: " + rows);
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to start machine assignment", e);
         }
 
     }
@@ -96,14 +96,14 @@ public class MachineAsignmentRepo implements RepoSpecificallyForMachineAss<Machi
             System.out.println("Rows affected: " + rows);
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to end machine assignment", e);
         }
     }
 
 
     @Override
     public void deleteEntry(int id) {
-        String sql = "INSERT INTO MACHINE_ASSIGNMENTS (LOAD_ID, MACHINE_ID, STARTED_AT, DURATION_MINUTES, ENDED_AT) VALUES (?,?,?,?,?)";
+        String sql = "DELETE FROM MACHINE_ASSIGNMENTS WHERE ASSIGNMENT_ID = ?";
         try (
             Connection conn = DataConnections.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)
@@ -115,7 +115,7 @@ public class MachineAsignmentRepo implements RepoSpecificallyForMachineAss<Machi
             System.out.println("Rows affected: " + rows);
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to delete machine assignment", e);
         }
 
     }
@@ -183,7 +183,6 @@ public class MachineAsignmentRepo implements RepoSpecificallyForMachineAss<Machi
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    while (rs.next()) {
 
                         // Retrieve timestamps
                         Timestamp ts = rs.getTimestamp("STARTED_AT");
@@ -207,15 +206,12 @@ public class MachineAsignmentRepo implements RepoSpecificallyForMachineAss<Machi
                                 rs.getInt("DURATION_MINUTES"),
                                 endedAt
                         ));
-                    }
-
-
                 }
             }
 
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            throw new RuntimeException("Failed to load machine assignments", e);
         }
 
         return ma;
