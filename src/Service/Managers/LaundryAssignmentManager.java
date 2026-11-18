@@ -68,7 +68,7 @@ public class LaundryAssignmentManager {
             case WASHING ->
                             updStage == ServiceStage.TRANSFER ||
                             updStage == ServiceStage.COMPLETED ||
-                            updStage == ServiceStage.MACHINE_BROKE_INTERRUPTION;
+                            updStage == ServiceStage.INTERRUPTION;
 
             case TRANSFER ->
                             updStage == ServiceStage.QUEUED_DRYER ||
@@ -76,9 +76,9 @@ public class LaundryAssignmentManager {
 
             case DRYING ->
                             updStage == ServiceStage.COMPLETED ||
-                            updStage == ServiceStage.MACHINE_BROKE_INTERRUPTION;
+                            updStage == ServiceStage.INTERRUPTION;
 
-            case MACHINE_BROKE_INTERRUPTION ->
+            case INTERRUPTION ->
                             updStage == ServiceStage.QUEUED_WASHER ||
                             updStage == ServiceStage.QUEUED_DRYER ||
                             updStage == ServiceStage.CANCELED;

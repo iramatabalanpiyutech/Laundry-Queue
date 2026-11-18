@@ -126,7 +126,7 @@ public class LaundryStatRepo implements LoadRepo<Load> {
 
     @Override
     public List<Load> findWasherQueue() {
-        String sql = "SELECT * FROM LAUNDRY_LOADS WHERE QUEUE_STATUS = 'QUEUED_WASHER' ORDER BY RECEIVED_AT = ?, LOAD_ID = ?";
+        String sql = "SELECT * FROM LAUNDRY_LOADS WHERE QUEUE_STATUS = 'QUEUED_WASHER' ORDER BY RECEIVED_AT, LOAD_ID";
         List<Load> loadQueueWasher = new ArrayList<>();
         try (
                 Connection conn = DataConnections.getConnection();
@@ -156,7 +156,7 @@ public class LaundryStatRepo implements LoadRepo<Load> {
 
     @Override
     public List<Load> findDryerQueue() {
-        String sql = "SELECT * FROM LAUNDRY_LOADS WHERE QUEUE_STATUS = 'QUEUED_DRYER' ORDER BY RECEIVED_AT = ?, LOAD_ID = ?";
+        String sql = "SELECT * FROM LAUNDRY_LOADS WHERE QUEUE_STATUS = 'QUEUED_DRYER' ORDER BY RECEIVED_AT, LOAD_ID";
         List<Load> loadQueueDryer = new ArrayList<>();
         try (
                 Connection conn = DataConnections.getConnection();

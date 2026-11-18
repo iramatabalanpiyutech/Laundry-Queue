@@ -1,7 +1,7 @@
-package gui;
+package AxedGui;
 
-import gui.pages.DashboardPage;
-import gui.pages.MachineStatus;
+import AxedGui.pages.DashboardPage;
+import AxedGui.pages.MachineStatus;
 
 import javax.swing.*;
 import java.awt.*;

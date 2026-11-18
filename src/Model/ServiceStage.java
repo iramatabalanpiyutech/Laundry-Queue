@@ -9,7 +9,7 @@ public enum ServiceStage {
     COMPLETED("Completed"),
 
     CANCELED("Canceled"),
-    MACHINE_BROKE_INTERRUPTION("Machine_broke_interruption");
+    INTERRUPTION("interruption");
 
 
     private final String servState;

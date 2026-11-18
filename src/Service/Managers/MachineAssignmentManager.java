@@ -48,14 +48,20 @@ public class MachineAssignmentManager {
             throw new IllegalArgumentException("Weight is over the recommended washer/dryer capacity");
         }
         // STEP 5: Check machine type matches queue
-        boolean chkStat = switch (load.getLoadStat()) {
-            case QUEUED_WASHER ->
-                    machine.getMachineType() == MachineType.WASHER;
-            case QUEUED_DRYER, TRANSFER ->
-                    machine.getMachineType() == MachineType.DRYER;
+        boolean chkStat;
 
-            default -> false;
-        };
+        if (load.getLoadStat() == ServiceStage.INTERRUPTION) {
+            chkStat = machine.getMachineType() == MachineType.WASHER
+                    || machine.getMachineType() == MachineType.DRYER;
+        } else {
+            chkStat = switch (load.getLoadStat()) {
+                case QUEUED_WASHER ->
+                        machine.getMachineType() == MachineType.WASHER;
+                case QUEUED_DRYER, TRANSFER ->
+                        machine.getMachineType() == MachineType.DRYER;
+                default -> false;
+            };
+        }
 
         if(!chkStat){
             throw new IllegalArgumentException("Machine type does not match load queue status.");
@@ -177,7 +183,7 @@ public class MachineAssignmentManager {
         ma.setEndedAt(LocalDateTime.now());
         mar.updateStateEnd(ma);
         mm.updateMachineState(machine.getMachineId(), MachineState.OUT_OF_SERVICE);
-        lam.updateLoadState(load.getLoadId(),ServiceStage.MACHINE_BROKE_INTERRUPTION);
+        lam.updateLoadState(load.getLoadId(),ServiceStage.INTERRUPTION);
     }
 
 
@@ -187,7 +193,7 @@ public class MachineAssignmentManager {
         MachineAssignment machineAssignment = Validator.requireExists(mar.findById(assignmentId), "Assigned machine");
 
         // STEP 1: Validate interruption
-        Validator.requireState(load.getLoadStat() == ServiceStage.MACHINE_BROKE_INTERRUPTION, "Load is not interrupted!");
+        Validator.requireState(load.getLoadStat() == ServiceStage.INTERRUPTION, "Load is not     interrupted!");
         Validator.requireState(machineAssignment.getLoadId() == loadId, "Assignment does not belong to this load!");
 
         // STEP 2: Verify previous assignment is closed
